@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
+	"unsafe"
 
 	"github.com/maxzender/jv/colorwriter"
 	"github.com/maxzender/jv/jsonfmt"
 	"github.com/maxzender/jv/jsontree"
 	"github.com/maxzender/jv/terminal"
 	termbox "github.com/nsf/termbox-go"
+	"github.com/tidwall/gjson"
 )
 
 var (
@@ -25,7 +28,7 @@ var (
 )
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [file]\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Usage: %s <query> [file]\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -43,8 +46,13 @@ func main() {
 
 	reader := os.Stdin
 	var err error
+	query := ""
 	if len(os.Args) > 1 {
-		reader, err = os.Open(os.Args[1])
+		query = os.Args[1]
+	}
+
+	if len(os.Args) > 2 {
+		reader, err = os.Open(os.Args[2])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
@@ -58,7 +66,24 @@ func main() {
 		os.Exit(1)
 	}
 
+	if query != "" {
+		value := gjson.Get(unsafeBytesToString(content), query)
+		content = unsafeFastStringToReadOnlyBytes(value.String())
+	}
+
 	os.Exit(run(content))
+}
+
+func unsafeBytesToString(b []byte) string {
+	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	sh := reflect.StringHeader{bh.Data, bh.Len}
+	return *(*string)(unsafe.Pointer(&sh))
+}
+
+func unsafeFastStringToReadOnlyBytes(s string) []byte {
+	sh := (*reflect.StringHeader)(unsafe.Pointer(&s))
+	bh := reflect.SliceHeader{sh.Data, sh.Len, sh.Len}
+	return *(*[]byte)(unsafe.Pointer(&bh))
 }
 
 func run(content []byte) int {
