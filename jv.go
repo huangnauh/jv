@@ -66,7 +66,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if query != "" {
+	if query != "" && query != "." {
 		value := gjson.Get(unsafeBytesToString(content), query)
 		content = unsafeFastStringToReadOnlyBytes(value.String())
 	}
@@ -121,24 +121,26 @@ func handleKeypress(t *terminal.Terminal, j *jsontree.JsonTree, e termbox.Event)
 		case termbox.KeyArrowDown:
 			t.MoveCursor(0, +1)
 		case termbox.KeyArrowLeft:
-			t.MoveCursor(-1, 0)
+			j.ToggleLine(t.CursorY + t.OffsetY)
 		case termbox.KeyArrowRight:
-			t.MoveCursor(+1, 0)
+			j.ToggleLine(t.CursorY + t.OffsetY)
 		case termbox.KeyEnter:
 			j.ToggleLine(t.CursorY + t.OffsetY)
 		case termbox.KeySpace:
+			j.ToggleLine(t.CursorY + t.OffsetY)
+		case termbox.KeyTab:
 			j.ToggleLine(t.CursorY + t.OffsetY)
 		}
 	} else {
 		switch e.Ch {
 		case 'h':
-			t.MoveCursor(-1, 0)
+			j.ToggleLine(t.CursorY + t.OffsetY)
 		case 'j':
 			t.MoveCursor(0, +1)
 		case 'k':
 			t.MoveCursor(0, -1)
 		case 'l':
-			t.MoveCursor(+1, 0)
+			j.ToggleLine(t.CursorY + t.OffsetY)
 		}
 	}
 }
