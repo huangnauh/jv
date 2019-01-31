@@ -13,10 +13,7 @@ go get -u github.com/maxzender/jv
 
 ## Example usage
 ```
-jv file.json
+cat file.json | ./jv aaa
 ```
-Or by reading from `stdin`:
-```
-jv < file.json
-echo '{"foo": "bar"}' | jv
-```
+
+
