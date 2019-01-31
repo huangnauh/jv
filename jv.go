@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -28,13 +30,14 @@ var (
 )
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s <query> [file]\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Usage: %s [-o] <query> [file]\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
 func main() {
-	var showHelp bool
+	var showHelp, output bool
 	flag.BoolVar(&showHelp, "h", false, "print usage")
+	flag.BoolVar(&output, "o", false, "pretty output")
 	flag.BoolVar(&showHelp, "help", false, "print usage")
 
 	flag.Usage = usage
@@ -47,12 +50,13 @@ func main() {
 	reader := os.Stdin
 	var err error
 	query := ""
-	if len(os.Args) > 1 {
-		query = os.Args[1]
+	args := flag.Args()
+	if len(args) > 0 {
+		query = args[0]
 	}
 
-	if len(os.Args) > 2 {
-		reader, err = os.Open(os.Args[2])
+	if len(args) > 1 {
+		reader, err = os.Open(args[1])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
@@ -69,6 +73,17 @@ func main() {
 	if query != "" && query != "." {
 		value := gjson.Get(unsafeBytesToString(content), query)
 		content = unsafeFastStringToReadOnlyBytes(value.String())
+	}
+
+	if output {
+		var buf bytes.Buffer
+		err = json.Indent(&buf, content, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "%s", unsafeBytesToString(content))
+		} else {
+			fmt.Fprintf(os.Stdout, "%s", unsafeBytesToString(buf.Bytes()))
+		}
+		return
 	}
 
 	os.Exit(run(content))
