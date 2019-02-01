@@ -101,36 +101,63 @@ func unsafeFastStringToReadOnlyBytes(s string) []byte {
 	return *(*[]byte)(unsafe.Pointer(&bh))
 }
 
-func run(content []byte) int {
+func genTree(content []byte) (*jsontree.JsonTree, error) {
 	writer := colorwriter.New(colorMap, termbox.ColorDefault)
 	formatter := jsonfmt.New(content, writer)
 	if err := formatter.Format(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		return 1
+		return nil, err
 	}
 	formattedJson := writer.Lines
 
 	tree := jsontree.New(formattedJson)
+	return tree, nil
+}
+
+func run(content []byte) int {
+	raw := content
+	tree, err := genTree(content)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+	root := tree
+
 	term, err := terminal.New(tree)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}
-	defer term.Close()
 
+	defer term.Close()
 	for {
-		term.Render()
-		e := term.Poll()
-		if e.Ch == 'q' || e.Key == termbox.KeyCtrlC {
-			return 0
+		tree, err = genTree(content)
+		if err != nil {
+			tree = root
 		}
-		handleKeypress(term, tree, e)
+		term.Change(tree)
+
+		for {
+			term.Render()
+			e := term.Poll()
+			if e.Key == termbox.KeyCtrlC {
+				return 0
+			}
+			query := handleKeypress(term, tree, e)
+			if query {
+				value := gjson.Get(unsafeBytesToString(raw), string(term.Query))
+				content = unsafeFastStringToReadOnlyBytes(value.String())
+				break
+			}
+		}
 	}
 }
 
-func handleKeypress(t *terminal.Terminal, j *jsontree.JsonTree, e termbox.Event) {
+func handleKeypress(t *terminal.Terminal, j *jsontree.JsonTree, e termbox.Event) bool {
+	query := false
 	if e.Ch == 0 {
 		switch e.Key {
+		case termbox.KeyBackspace, termbox.KeyBackspace2:
+			t.DelQuery()
 		case termbox.KeyArrowUp:
 			t.MoveCursor(0, -1)
 		case termbox.KeyArrowDown:
@@ -140,22 +167,18 @@ func handleKeypress(t *terminal.Terminal, j *jsontree.JsonTree, e termbox.Event)
 		case termbox.KeyArrowRight:
 			j.ToggleLine(t.CursorY + t.OffsetY)
 		case termbox.KeyEnter:
-			j.ToggleLine(t.CursorY + t.OffsetY)
+			query = true
 		case termbox.KeySpace:
 			j.ToggleLine(t.CursorY + t.OffsetY)
 		case termbox.KeyTab:
 			j.ToggleLine(t.CursorY + t.OffsetY)
+		case termbox.KeyCtrlU:
+			query = t.ClearQuery()
+		case termbox.KeyCtrlW:
+			query = t.DelWordQuery()
 		}
 	} else {
-		switch e.Ch {
-		case 'h':
-			j.ToggleLine(t.CursorY + t.OffsetY)
-		case 'j':
-			t.MoveCursor(0, +1)
-		case 'k':
-			t.MoveCursor(0, -1)
-		case 'l':
-			j.ToggleLine(t.CursorY + t.OffsetY)
-		}
+		t.AddQuery(e.Ch)
 	}
+	return query
 }

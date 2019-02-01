@@ -9,6 +9,7 @@ type Terminal struct {
 	Width, Height    int
 	CursorX, CursorY int
 	OffsetX, OffsetY int
+	Query            []rune
 	Tree             *jsontree.JsonTree
 }
 
@@ -19,7 +20,15 @@ func New(tree *jsontree.JsonTree) (*Terminal, error) {
 	}
 
 	w, h := termbox.Size()
-	return &Terminal{Width: w, Height: h, Tree: tree}, nil
+	return &Terminal{Width: w, Height: h - 1, Tree: tree, Query: make([]rune, 0)}, nil
+}
+
+func (t *Terminal) Change(tree *jsontree.JsonTree) {
+	t.Tree = tree
+	t.CursorX = 0
+	t.CursorY = 0
+	t.OffsetX = 0
+	t.OffsetY = 0
 }
 
 func (t *Terminal) MoveCursor(x, y int) {
@@ -52,6 +61,40 @@ func (t *Terminal) EnsureCursorWithinWindow() {
 	t.CursorY = min(t.Height-1, max(0, t.CursorY))
 }
 
+func (t *Terminal) DelQuery() bool {
+	if len(t.Query) >= 1 {
+		t.Query = t.Query[:len(t.Query)-1]
+		return true
+	}
+	return false
+}
+
+func (t *Terminal) ClearQuery() bool {
+	if len(t.Query) >= 1 {
+		t.Query = t.Query[:0]
+		return true
+	}
+	return false
+}
+
+func (t *Terminal) DelWordQuery() bool {
+	if len(t.Query) >= 1 {
+		for i := len(t.Query) - 1; i >= 0; i-- {
+			if t.Query[i] == '.' {
+				t.Query = t.Query[:i]
+				return true
+			}
+		}
+		t.Query = t.Query[:0]
+		return true
+	}
+	return false
+}
+
+func (t *Terminal) AddQuery(ch rune) {
+	t.Query = append(t.Query, ch)
+}
+
 func (t *Terminal) Render() {
 	termbox.Clear(termbox.ColorWhite, termbox.ColorDefault)
 
@@ -63,6 +106,10 @@ func (t *Terminal) Render() {
 				termbox.SetCell(x, y, c.Val, c.Color, termbox.ColorDefault)
 			}
 		}
+	}
+
+	for i, c := range t.Query {
+		termbox.SetCell(i, t.Height, c, termbox.ColorBlue, termbox.ColorDefault)
 	}
 
 	termbox.SetCursor(t.CursorX, t.CursorY)
