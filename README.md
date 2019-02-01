@@ -4,11 +4,25 @@
 # jv
 jv (for jsonviewer) helps you view your JSON.
 
-[![asciicast](https://asciinema.org/a/123606.png)](https://asciinema.org/a/123606)
+<p align="center">
+    <img src="http://huangnauh.github.io/examples/jv/example.svg">
+    <img src="http://huangnauh.github.io/examples/jv/jsonline.svg">
+</p>
 
 ## Installation
 ```
-go get -u github.com/maxzender/jv
+git clone git@github.com:huangnauh/jv.git $GOPATH/src/github.com/maxzender/jv
+cd $GOPATH/src/github.com/maxzender/jv && go get ./...
+```
+
+## usage
+
+```
+Usage: ./jv [-o] <query> [file]
+  -h	print usage
+  -help
+    	print usage
+  -o	pretty output
 ```
 
 ## Example usage

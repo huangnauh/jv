@@ -25,10 +25,25 @@ func New(tree *jsontree.JsonTree) (*Terminal, error) {
 
 func (t *Terminal) Change(tree *jsontree.JsonTree) {
 	t.Tree = tree
+	t.MoveTop()
+}
+
+func (t *Terminal) MoveTop() {
 	t.CursorX = 0
 	t.CursorY = 0
 	t.OffsetX = 0
 	t.OffsetY = 0
+}
+
+func (t *Terminal) MovePgup() {
+	t.OffsetY = max(0, t.OffsetY-t.Height)
+}
+
+func (t *Terminal) MovePgdn() {
+	nextLine := t.Tree.Line(t.OffsetY + t.CursorY)
+	if nextLine != nil {
+		t.OffsetY = t.OffsetY + t.Height
+	}
 }
 
 func (t *Terminal) MoveCursor(x, y int) {

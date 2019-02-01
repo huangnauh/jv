@@ -176,6 +176,12 @@ func handleKeypress(t *terminal.Terminal, j *jsontree.JsonTree, e termbox.Event)
 			query = t.ClearQuery()
 		case termbox.KeyCtrlW:
 			query = t.DelWordQuery()
+		case termbox.KeyCtrlT:
+			t.MoveTop()
+		case termbox.KeyPgup:
+			t.MovePgup()
+		case termbox.KeyPgdn:
+			t.MovePgdn()
 		}
 	} else {
 		t.AddQuery(e.Ch)
